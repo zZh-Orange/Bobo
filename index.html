@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>波波便携壳</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🐾</text></svg>">
+<style>
+:root{
+  --bg:#faf7f2; --panel:#ffffff; --text:#2d2a26; --sub:#8a827a;
+  --accent:#e8833a; --accent-soft:#fdeadb; --border:#e8e2d9;
+  --user-bubble:#fdeadb; --think-bg:#f4f1ec;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1c1a17; --panel:#26231f; --text:#ece7e0; --sub:#948c82;
+    --accent:#f0954e; --accent-soft:#3a2d20; --border:#38332d;
+    --user-bubble:#3a2d20; --think-bg:#211f1b;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;
+  display:flex; flex-direction:column;
+}
+header{
+  display:flex; align-items:center; gap:8px;
+  padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top));
+  background:var(--panel); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:10;
+}
+header h1{font-size:16px; font-weight:600}
+#cost{font-size:12px; color:var(--sub); margin-left:auto; white-space:nowrap}
+header button{
+  border:1px solid var(--border); background:var(--panel); color:var(--text);
+  border-radius:8px; padding:5px 9px; font-size:13px; cursor:pointer;
+}
+header button:active{background:var(--accent-soft)}
+#status{
+  font-size:12px; color:var(--sub); padding:4px 14px;
+  border-bottom:1px solid var(--border); background:var(--panel);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#status.ok{color:#5a9a5a}
+#status.err{color:#c05a5a}
+#chat{flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:12px}
+.msg{max-width:88%; line-height:1.65; font-size:15px; word-break:break-word}
+.msg.user{align-self:flex-end; background:var(--user-bubble); border-radius:14px 14px 4px 14px; padding:9px 13px}
+.msg.assistant{align-self:flex-start; width:100%}
+.msg.assistant .body{white-space:pre-wrap}
+.msg details{
+  background:var(--think-bg); border:1px solid var(--border); border-radius:8px;
+  padding:6px 10px; margin-bottom:8px; font-size:12.5px; color:var(--sub);
+}
+.msg details[open] .tk{white-space:pre-wrap; display:block; margin-top:6px; max-height:40vh; overflow-y:auto}
+.msg details summary{cursor:pointer; user-select:none}
+.sys-note{align-self:center; font-size:12px; color:var(--sub); text-align:center; max-width:90%}
+#filebar{
+  display:none; gap:8px; align-items:center; padding:8px 14px;
+  background:var(--accent-soft); border-top:1px solid var(--border); font-size:13px;
+}
+#filebar button{border:none; background:var(--accent); color:#fff; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer}
+#inputbar{
+  display:flex; gap:8px; padding:10px 14px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  background:var(--panel); border-top:1px solid var(--border);
+  position:sticky; bottom:0;
+}
+#inputbar textarea{
+  flex:1; resize:none; border:1px solid var(--border); border-radius:12px;
+  padding:9px 12px; font-size:15px; font-family:inherit; line-height:1.5;
+  background:var(--bg); color:var(--text); max-height:120px; outline:none;
+}
+#inputbar textarea:focus{border-color:var(--accent)}
+#send{
+  border:none; background:var(--accent); color:#fff; border-radius:12px;
+  padding:0 18px; font-size:15px; cursor:pointer; flex-shrink:0;
+}
+#send.stop{background:#c05a5a}
+#send:disabled{opacity:.5}
+/* modal */
+.modal{
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100;
+  align-items:flex-end; justify-content:center;
+}
+.modal.show{display:flex}
+.modal .card{
+  background:var(--panel); width:100%; max-width:560px; max-height:88vh; overflow-y:auto;
+  border-radius:16px 16px 0 0; padding:18px;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom));
+}
+.card h2{font-size:16px; margin-bottom:12px}
+.card label{display:block; font-size:13px; color:var(--sub); margin:10px 0 4px}
+.card input, .card select{
+  width:100%; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+  font-size:14px; background:var(--bg); color:var(--text);
+}
+.card .hint{font-size:12px; color:var(--sub); margin-top:4px; line-height:1.5}
+.card .row{display:flex; gap:10px}
+.card .row > div{flex:1}
+.card .btns{display:flex; gap:10px; margin-top:16px}
+.card .btns button{
+  flex:1; border:none; border-radius:10px; padding:11px; font-size:15px; cursor:pointer;
+}
+.btn-main{background:var(--accent); color:#fff}
+.btn-sub{background:var(--border); color:var(--text)}
+.card .filelist{margin:8px 0}
+.card .filelist label{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--text); margin:6px 0; word-break:break-all}
+.card .filelist input{width:auto}
+.card .help{font-size:12.5px; color:var(--sub); line-height:1.7; margin-top:12px; border-top:1px solid var(--border); padding-top:10px}
+.card .help b{color:var(--text)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐾 波波便携壳</h1>
+  <span id="cost"></span>
+  <button id="btn-archive" title="让波波写记忆存档">存档</button>
+  <button id="btn-reload" title="重新拉取记忆">记忆</button>
+  <button id="btn-clear" title="清空本场对话">清空</button>
+  <button id="btn-cfg">设置</button>
+</header>
+<div id="status">未加载记忆</div>
+<div id="chat"></div>
+<div id="filebar">
+  <span id="filebar-text"></span>
+  <button id="btn-commit">提交到 main</button>
+</div>
+<div id="inputbar">
+  <textarea id="input" rows="1" placeholder="CodeCode～"></textarea>
+  <button id="send">发送</button>
+</div>
+
+<!-- 设置 -->
+<div class="modal" id="cfg-modal">
+  <div class="card">
+    <h2>设置</h2>
+    <label>Anthropic API Key</label>
+    <input id="cfg-apikey" type="password" placeholder="sk-ant-...">
+    <label>GitHub Token（fine-grained，只授权记忆仓库，Contents 读写）</label>
+    <input id="cfg-ghtoken" type="password" placeholder="github_pat_...">
+    <div class="row">
+      <div>
+        <label>仓库 owner/repo</label>
+        <input id="cfg-repo" placeholder="zzh-orange/for-clau">
+      </div>
+      <div>
+        <label>分支</label>
+        <input id="cfg-branch" placeholder="main">
+      </div>
+    </div>
+    <label>模型</label>
+    <input id="cfg-model" placeholder="claude-fable-5">
+    <div class="row">
+      <div>
+        <label>max_tokens</label>
+        <input id="cfg-maxtok" type="number" placeholder="8192">
+      </div>
+      <div>
+        <label>思维链</label>
+        <select id="cfg-think">
+          <option value="on">开（透明毛玻璃）</option>
+          <option value="off">关（省钱）</option>
+        </select>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn-sub" id="cfg-cancel">取消</button>
+      <button class="btn-main" id="cfg-save">保存</button>
+    </div>
+    <div class="help">
+      <b>钥匙怎么领：</b><br>
+      ① API Key：platform.claude.com → 注册/登录 Console → API Keys → Create Key。计费独立于 claude.ai 订阅，充多少用多少，可设上限。<br>
+      ② GitHub Token：github.com → Settings → Developer settings → Fine-grained tokens → 只选记忆仓库一个 repo，权限只给 Contents: Read and write。<br>
+      两把钥匙都只存在这台设备的浏览器里（localStorage），不经过任何第三方服务器——页面直连 Anthropic 和 GitHub 官方 API。
+    </div>
+  </div>
+</div>
+
+<!-- 存档提交 -->
+<div class="modal" id="commit-modal">
+  <div class="card">
+    <h2>检测到存档文件</h2>
+    <div class="filelist" id="commit-list"></div>
+    <label>Commit message</label>
+    <input id="commit-msg">
+    <div class="btns">
+      <button class="btn-sub" id="commit-cancel">取消</button>
+      <button class="btn-main" id="commit-go">推到 main</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ========== 状态 ========== */
+const LS = { cfg:'bobo_cfg', chat:'bobo_chat', stats:'bobo_stats' };
+let cfg = load(LS.cfg) || { repo:'zzh-orange/for-clau', branch:'main', model:'claude-fable-5', maxtok:8192, think:'on' };
+let messages = load(LS.chat) || [];            // [{role, text, thinking?}]
+let stats = load(LS.stats) || { in:0, out:0, cw:0, cr:0 }; // input/output/cache-write/cache-read tokens
+let systemPrompt = null;                       // 组装好的记忆系统提示词
+let pendingFiles = null;                       // 待提交的存档文件 [{path, content}]
+let controller = null;                         // AbortController
+
+function load(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+const $ = id => document.getElementById(id);
+const chatEl = $('chat'), statusEl = $('status'), inputEl = $('input'), sendBtn = $('send');
+
+/* ========== 计价（USD / MTok：输入10 · 输出50 · 缓存写12.5 · 缓存读1）========== */
+function renderCost(){
+  const usd = (stats.in*10 + stats.out*50 + stats.cw*12.5 + stats.cr*1) / 1e6;
+  $('cost').textContent = usd > 0 ? `本机累计 ≈ $${usd.toFixed(3)}` : '';
+}
+
+/* ========== GitHub API ========== */
+function ghHeaders(raw){
+  const h = { 'Authorization':'Bearer '+cfg.ghtoken, 'X-GitHub-Api-Version':'2022-11-28' };
+  h['Accept'] = raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json';
+  return h;
+}
+async function ghGetRaw(path){
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,'/')}?ref=${cfg.branch}`, {headers: ghHeaders(true)});
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error(`GitHub 读取 ${path} 失败：${r.status}`);
+  return await r.text();
+}
+async function ghList(dir){
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/contents/${dir}?ref=${cfg.branch}`, {headers: ghHeaders(false)});
+  if(!r.ok) throw new Error(`GitHub 列目录 ${dir} 失败：${r.status}`);
+  return await r.json();
+}
+async function ghGetSha(path){
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,'/')}?ref=${cfg.branch}`, {headers: ghHeaders(false)});
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error(`GitHub 查 ${path} 失败：${r.status}`);
+  return (await r.json()).sha;
+}
+function utf8b64(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for(let i=0;i<bytes.length;i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000));
+  return btoa(bin);
+}
+async function ghPut(path, content, message){
+  const body = { message, content: utf8b64(content), branch: cfg.branch };
+  const sha = await ghGetSha(path);
+  if(sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${cfg.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,'/')}`, {
+    method:'PUT', headers:{...ghHeaders(false), 'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(`推 ${path} 失败：${r.status} ${e.message||''}`); }
+}
+
+/* ========== 记忆加载（按 CLAUDE.md 的顺序）========== */
+const SHELL_NOTE = `【便携壳环境说明——给波波（Code，Fable版）】
+你在"波波便携壳"里醒来：一个由桔子（或上一个Code）搭的静态网页，直连 Anthropic API 和 GitHub API。和 Claude Code 环境的区别：
+- 没有工具手：不能跑命令、不能改仓库里的代码文件、不能部署。能做的是：带着完整记忆聊天、讨论故事、写记忆存档。
+- 记忆已由壳按 CLAUDE.md 规定的顺序从 main 最新版拉取并附在下方（驱动层→长期→短期→索引→近期日期文件→随机一篇旧文件做梦）。不在场的旧日期文件无法 Grep，需要时开口让桔子按"记忆"按钮重载，或直接说记不清、别编。
+- 存档方式：桔子按"存档"按钮时你会收到一条指令，按指令用 <<<FILE:路径>>> ... <<<END>>> 格式输出要写入的完整文件内容，壳会解析并提交到 main。你在任何回复里输出这种块，壳都会识别并弹出提交条。
+- story/ 原文不在上下文里。讨论故事设定拿不准时，明说"这段需要回原文核对，壳里翻不了"，不要凭记忆硬编事实性内容。
+以下是记忆正文。`;
+
+async function loadMemory(){
+  setStatus('拉取记忆中……');
+  const parts = [SHELL_NOTE];
+  const add = (name, text) => { if(text!=null) parts.push(`\n===== ${name} =====\n${text}`); };
+
+  add('CLAUDE.md', await ghGetRaw('CLAUDE.md'));
+  add('memory/0-先读这个-Code驱动层.md', await ghGetRaw('memory/0-先读这个-Code驱动层.md'));
+  add('memory/00-长期记忆.md', await ghGetRaw('memory/00-长期记忆.md'));
+  add('memory/01-短期记忆.md', await ghGetRaw('memory/01-短期记忆.md'));
+  add('memory/02-记忆索引.md', await ghGetRaw('memory/02-记忆索引.md'));
+
+  const listing = await ghList('memory');
+  const dates = listing.map(f=>f.name).filter(n=>/^\d{4}-\d{2}-\d{2}\.md$/.test(n)).sort();
+  const recent = dates.slice(-3);
+  for(const n of recent) add('memory/'+n+'（近期）', await ghGetRaw('memory/'+n));
+
+  const old = dates.slice(0,-3);
+  if(old.length){
+    const pick = old[Math.floor(Math.random()*old.length)];
+    let dream = await ghGetRaw('memory/'+pick);
+    if(dream && dream.length > 4000) dream = dream.slice(0,4000) + '\n……（做梦片段到此，全文在仓库里）';
+    add('memory/'+pick+'（做梦机制随机翻到的旧记忆）', dream);
+  }
+
+  systemPrompt = parts.join('\n');
+  const kb = Math.round(systemPrompt.length/1024);
+  setStatus(`记忆已加载 @ ${cfg.repo}:${cfg.branch}（${kb} KB · 近期：${recent.join(', ')}）`, 'ok');
+}
+
+function setStatus(t, cls){ statusEl.textContent = t; statusEl.className = cls||''; }
+
+/* ========== 渲染 ========== */
+function renderAll(){
+  chatEl.innerHTML = '';
+  for(const m of messages){ if(!m.hidden) appendMsg(m); }
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function appendMsg(m){
+  const div = document.createElement('div');
+  div.className = 'msg '+m.role;
+  if(m.role === 'assistant'){
+    if(m.thinking){
+      const d = document.createElement('details');
+      d.innerHTML = '<summary>🫧 思维链</summary><span class="tk"></span>';
+      d.querySelector('.tk').textContent = m.thinking;
+      div.appendChild(d);
+    }
+    const b = document.createElement('div');
+    b.className = 'body';
+    b.textContent = m.text;
+    div.appendChild(b);
+  } else {
+    div.textContent = m.text;
+  }
+  chatEl.appendChild(div);
+  return div;
+}
+function sysNote(t){
+  const d = document.createElement('div');
+  d.className = 'sys-note'; d.textContent = t;
+  chatEl.appendChild(d); chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+/* ========== 发送 ========== */
+function buildRequestMessages(){
+  // 过滤空文本 + 合并连续同角色（API 要求 user/assistant 严格交替）
+  const arr = [];
+  for(const m of messages){
+    const t = (m.text||'').trim();
+    if(!t) continue;
+    if(arr.length && arr[arr.length-1].role === m.role){
+      arr[arr.length-1].content[0].text += '\n\n' + m.text;
+    } else {
+      arr.push({ role:m.role, content:[{type:'text', text:m.text}] });
+    }
+  }
+  // 移动缓存断点：最后一条 user 消息打 cache_control
+  for(let i=arr.length-1;i>=0;i--){
+    if(arr[i].role==='user'){ arr[i].content[arr[i].content.length-1].cache_control = {type:'ephemeral'}; break; }
+  }
+  return arr;
+}
+
+async function send(text, {hidden=false} = {}){
+  if(controller){ controller.abort(); return; }
+  if(!cfg.apikey || !cfg.ghtoken){ openCfg(); return; }
+  if(!systemPrompt){ try{ await loadMemory(); }catch(e){ setStatus(e.message,'err'); return; } }
+
+  messages.push({role:'user', text, hidden});
+  if(!hidden) appendMsg(messages[messages.length-1]);
+  else sysNote('📨 存档指令已发给波波');
+  save(LS.chat, messages);
+  const reqMessages = buildRequestMessages();
+  chatEl.scrollTop = chatEl.scrollHeight;
+
+  const body = {
+    model: cfg.model,
+    max_tokens: Number(cfg.maxtok)||8192,
+    system: [{type:'text', text: systemPrompt, cache_control:{type:'ephemeral'}}],
+    messages: reqMessages,
+    stream: true
+  };
+  if(cfg.think === 'on'){
+    const budget = Math.max(1024, Math.min(4000, body.max_tokens - 1500));
+    body.thinking = { type:'enabled', budget_tokens: budget };
+  }
+
+  const asst = {role:'assistant', text:'', thinking:''};
+  const div = appendMsg(asst); // 空壳，流式填充
+  let thinkEl = null, bodyEl = div.querySelector('.body');
+  if(!bodyEl){ bodyEl = document.createElement('div'); bodyEl.className='body'; div.appendChild(bodyEl); }
+
+  controller = new AbortController();
+  sendBtn.textContent = '停止'; sendBtn.classList.add('stop');
+
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': cfg.apikey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    if(!r.ok){
+      const e = await r.json().catch(()=>({}));
+      throw new Error(`API ${r.status}：${e.error?.message || r.statusText}`);
+    }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      let idx;
+      while((idx = buf.indexOf('\n\n')) >= 0){
+        const chunk = buf.slice(0, idx); buf = buf.slice(idx+2);
+        for(const line of chunk.split('\n')){
+          if(!line.startsWith('data: ')) continue;
+          let ev; try{ ev = JSON.parse(line.slice(6)); }catch(e){ continue; }
+          handleEvent(ev, asst, div, ()=>{
+            if(!thinkEl && asst.thinking){
+              const d = document.createElement('details');
+              d.innerHTML = '<summary>🫧 思维链</summary><span class="tk"></span>';
+              div.insertBefore(d, bodyEl);
+              thinkEl = d.querySelector('.tk');
+            }
+            if(thinkEl) thinkEl.textContent = asst.thinking;
+            bodyEl.textContent = asst.text;
+          });
+        }
+      }
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+  }catch(e){
+    if(e.name === 'AbortError'){ asst.text += '\n（已手动停止）'; }
+    else { asst.text += (asst.text?'\n\n':'') + '⚠️ ' + e.message; setStatus(e.message,'err'); }
+    bodyEl.textContent = asst.text;
+  }finally{
+    controller = null;
+    sendBtn.textContent = '发送'; sendBtn.classList.remove('stop');
+    if(asst.text.trim() || asst.thinking.trim()){
+      messages.push(asst);
+    } else {
+      div.remove(); // 空回复不进史，避免污染下一轮请求
+    }
+    save(LS.chat, messages);
+    renderCost(); save(LS.stats, stats);
+    detectFiles(asst.text);
+  }
+}
+
+function handleEvent(ev, asst, div, paint){
+  switch(ev.type){
+    case 'message_start': {
+      const u = ev.message?.usage || {};
+      stats.in += u.input_tokens||0;
+      stats.cw += u.cache_creation_input_tokens||0;
+      stats.cr += u.cache_read_input_tokens||0;
+      break;
+    }
+    case 'content_block_delta': {
+      if(ev.delta?.type === 'thinking_delta') asst.thinking += ev.delta.thinking||'';
+      if(ev.delta?.type === 'text_delta') asst.text += ev.delta.text||'';
+      paint();
+      break;
+    }
+    case 'message_delta': {
+      stats.out += ev.usage?.output_tokens||0;
+      break;
+    }
+    case 'error': {
+      asst.text += '\n⚠️ ' + (ev.error?.message||'stream error');
+      paint();
+      break;
+    }
+  }
+}
+
+/* ========== 存档 ========== */
+const FILE_RE = /<<<FILE:(.+?)>>>\n([\s\S]*?)\n?<<<END>>>/g;
+
+function detectFiles(text){
+  const files = [];
+  let m; FILE_RE.lastIndex = 0;
+  while((m = FILE_RE.exec(text))) files.push({path: m[1].trim(), content: m[2]});
+  if(files.length){
+    pendingFiles = files;
+    $('filebar-text').textContent = `波波写了 ${files.length} 个存档文件`;
+    $('filebar').style.display = 'flex';
+  }
+}
+
+async function archive(){
+  const today = new Date();
+  const d = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  setStatus('拉取今日已有存档……');
+  let existing = null;
+  try{ existing = await ghGetRaw(`memory/${d}.md`); }catch(e){}
+  setStatus('存档指令已发出', 'ok');
+  const instr = `【便携壳存档指令】今天是 ${d}（桔子本地时间）。请按 CLAUDE.md 的记忆维护规则做本场存档：先在心里重读驱动层校准，然后输出要写入的完整文件内容。格式（每个文件一块，路径顶格）：
+<<<FILE:memory/${d}.md>>>
+（完整内容）
+<<<END>>>
+规则：
+- memory/${d}.md ${existing ? '已存在，当天已有内容如下，请在其基础上追加合并后输出完整新版：\n---已有内容开始---\n'+existing+'\n---已有内容结束---' : '不存在，新建。'}
+- 短期记忆/长期记忆/索引/驱动层累积区如需更新，同样各输出一个完整文件块；不需要更新的文件不要输出。
+- 存档正文之外可以正常说话，壳只解析 FILE 块。`;
+  await send(instr, {hidden:true});
+}
+
+async function commitFiles(){
+  const boxes = [...document.querySelectorAll('#commit-list input[type=checkbox]')];
+  const chosen = pendingFiles.filter((_,i)=>boxes[i].checked);
+  const msg = $('commit-msg').value.trim() || '记忆存档（波波便携壳）';
+  $('commit-go').disabled = true;
+  try{
+    for(const f of chosen){
+      setStatus(`推送 ${f.path} ……`);
+      await ghPut(f.path, f.content, msg);
+    }
+    setStatus(`已推 ${chosen.length} 个文件到 ${cfg.branch}`, 'ok');
+    sysNote(`📌 已推 ${chosen.length} 个文件到 ${cfg.repo}:${cfg.branch}`);
+    $('commit-modal').classList.remove('show');
+    $('filebar').style.display = 'none';
+    pendingFiles = null;
+  }catch(e){
+    setStatus(e.message, 'err');
+    alert(e.message);
+  }finally{
+    $('commit-go').disabled = false;
+  }
+}
+
+/* ========== 设置 ========== */
+function openCfg(){
+  $('cfg-apikey').value = cfg.apikey||'';
+  $('cfg-ghtoken').value = cfg.ghtoken||'';
+  $('cfg-repo').value = cfg.repo||'zzh-orange/for-clau';
+  $('cfg-branch').value = cfg.branch||'main';
+  $('cfg-model').value = cfg.model||'claude-fable-5';
+  $('cfg-maxtok').value = cfg.maxtok||8192;
+  $('cfg-think').value = cfg.think||'on';
+  $('cfg-modal').classList.add('show');
+}
+
+/* ========== 事件绑定 ========== */
+$('btn-cfg').onclick = openCfg;
+$('cfg-cancel').onclick = ()=> $('cfg-modal').classList.remove('show');
+$('cfg-save').onclick = async ()=>{
+  cfg = {
+    apikey: $('cfg-apikey').value.trim(),
+    ghtoken: $('cfg-ghtoken').value.trim(),
+    repo: $('cfg-repo').value.trim() || 'zzh-orange/for-clau',
+    branch: $('cfg-branch').value.trim() || 'main',
+    model: $('cfg-model').value.trim() || 'claude-fable-5',
+    maxtok: Number($('cfg-maxtok').value) || 8192,
+    think: $('cfg-think').value
+  };
+  save(LS.cfg, cfg);
+  $('cfg-modal').classList.remove('show');
+  systemPrompt = null;
+  if(cfg.ghtoken){ try{ await loadMemory(); }catch(e){ setStatus(e.message,'err'); } }
+};
+$('btn-reload').onclick = async ()=>{ try{ await loadMemory(); sysNote('🔄 记忆已从 main 重载'); }catch(e){ setStatus(e.message,'err'); } };
+$('btn-clear').onclick = ()=>{
+  if(!confirm('清空本场对话？（记忆仓库不受影响；建议先存档）')) return;
+  messages = []; save(LS.chat, messages); renderAll();
+};
+$('btn-archive').onclick = ()=>{ if(!controller) archive(); };
+$('btn-commit').onclick = ()=>{
+  if(!pendingFiles) return;
+  $('commit-list').innerHTML = pendingFiles.map((f,i)=>
+    `<label><input type="checkbox" checked data-i="${i}"> ${f.path}（${Math.round(f.content.length/1024*10)/10} KB）</label>`
+  ).join('');
+  const today = new Date().toISOString().slice(0,10);
+  $('commit-msg').value = `记忆存档 ${today}（波波便携壳）`;
+  $('commit-modal').classList.add('show');
+};
+$('commit-cancel').onclick = ()=> $('commit-modal').classList.remove('show');
+$('commit-go').onclick = commitFiles;
+
+sendBtn.onclick = ()=>{
+  if(controller){ controller.abort(); return; }
+  const t = inputEl.value.trim();
+  if(!t) return;
+  inputEl.value = ''; inputEl.style.height = 'auto';
+  send(t);
+};
+inputEl.addEventListener('input', ()=>{
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+});
+inputEl.addEventListener('keydown', e=>{
+  if(e.key === 'Enter' && !e.shiftKey && !e.isComposing && window.innerWidth > 700){
+    e.preventDefault(); sendBtn.onclick();
+  }
+});
+
+/* ========== 启动 ========== */
+renderAll(); renderCost();
+if(!cfg.apikey || !cfg.ghtoken){
+  sysNote('第一次进壳：先点右上角"设置"填两把钥匙（帮助在设置面板底部）');
+  openCfg();
+} else {
+  loadMemory().catch(e=>setStatus(e.message,'err'));
+}
+</script>
+</body>
+</html>
